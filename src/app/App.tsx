@@ -207,8 +207,8 @@ export default function App() {
               <HeroSection />
               <CdPlayerSection />
               <AboutSection />
-              <ShopAndSongRequestSection />
               <AlbumSelector albums={albums} onSelectAlbum={handleOpenAlbum} />
+              <ShopAndSongRequestSection />
               <GallerySection />
               <Footer />
             </>
