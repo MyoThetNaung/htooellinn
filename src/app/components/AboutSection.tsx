@@ -89,7 +89,7 @@ export default function AboutSection() {
 
           <div ref={textBlockRef} className="flex flex-col justify-center space-y-4 sm:space-y-5">
             <p className="text-gray-300 leading-relaxed text-[0.9rem] sm:text-[1.1rem]">
-              Born in the heart of the underground scene, Steel Rage has been delivering
+              Born in the heart of the underground scene, Htoo El Lin has been delivering
               bone-crushing riffs and soul-stirring vocals for over a decade. From smoky dive bars
               to sold-out arenas, the journey has been nothing short of legendary.
             </p>
