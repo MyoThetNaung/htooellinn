@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { Guitar, Mic2, Music } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import FuzzyText from "./FuzzyText";
 
 const legendImage = new URL("../../../resource images/LEGEND.jpg", import.meta.url).href;
 
@@ -74,7 +75,23 @@ export default function AboutSection() {
             textShadow: "0 0 20px rgba(220, 38, 38, 0.5)",
           }}
         >
-          The Legend
+          <FuzzyText
+            baseIntensity={0.06}
+            hoverIntensity={0.7}
+            enableHover={false}
+            clickEffect={false}
+            glitchMode
+            glitchInterval={1100}
+            glitchDuration={220}
+            fuzzRange={16}
+            direction="both"
+            fontSize="clamp(2.3rem, 4.6vw, 3.5rem)"
+            fontWeight={900}
+            letterSpacing={1}
+            color="#ffffff"
+          >
+            The Legend
+          </FuzzyText>
         </h2>
 
         <div className="grid md:grid-cols-2 gap-8 md:gap-12">

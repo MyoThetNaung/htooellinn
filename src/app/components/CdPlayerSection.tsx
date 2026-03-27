@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import gsap from "gsap";
 import { Pause, Play } from "lucide-react";
+import FuzzyText from "./FuzzyText";
 
 const discImage = new URL("../../../resource images/disc.png", import.meta.url).href;
 const songFile = new URL("../../../MUSIC/Min Lay Nar Lal.mp3", import.meta.url).href;
@@ -141,7 +142,23 @@ export default function CdPlayerSection() {
           className="text-center uppercase tracking-[0.35em] text-zinc-200"
           style={{ fontSize: "clamp(1.2rem, 2.8vw, 2rem)", fontWeight: 800 }}
         >
-          Listen
+          <FuzzyText
+            baseIntensity={0.06}
+            hoverIntensity={0.7}
+            enableHover={false}
+            clickEffect={false}
+            glitchMode
+            glitchInterval={950}
+            glitchDuration={260}
+            fuzzRange={14}
+            direction="both"
+            fontSize="clamp(1.8rem, 3.2vw, 2.6rem)"
+            fontWeight={900}
+            letterSpacing={1}
+            color="#ffffff"
+          >
+            Listen
+          </FuzzyText>
         </h2>
 
         <div ref={discWrapRef}>

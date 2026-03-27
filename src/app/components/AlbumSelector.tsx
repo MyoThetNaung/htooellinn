@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Album } from "../App";
+import FuzzyText from "./FuzzyText";
 
 interface AlbumSelectorProps {
   albums: Album[];
@@ -10,6 +11,10 @@ interface AlbumSelectorProps {
 
 export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const sectionRef = useRef<HTMLElement>(null);
+  const titleBlockRef = useRef<HTMLDivElement>(null);
+  const carouselWrapRef = useRef<HTMLDivElement>(null);
+  const dotsRef = useRef<HTMLDivElement>(null);
   const carouselRef = useRef<HTMLDivElement>(null);
   const albumRefs = useRef<(HTMLDivElement | null)[]>([]);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -18,6 +23,54 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
   useEffect(() => {
     updateCarousel();
   }, [currentIndex]);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: "top top",
+          end: "+=900",
+          pin: true,
+          pinSpacing: true,
+          anticipatePin: 1,
+          scrub: 1,
+        },
+      });
+
+      tl.from(
+        titleBlockRef.current,
+        {
+          y: 170,
+          opacity: 0,
+          scale: 0.98,
+          ease: "power3.out",
+        },
+        0
+      )
+        .from(
+          carouselWrapRef.current,
+          {
+            y: 240,
+            opacity: 0,
+            scale: 0.96,
+            ease: "power3.out",
+          },
+          0.08
+        )
+        .from(
+          dotsRef.current,
+          {
+            y: 130,
+            opacity: 0,
+            ease: "power3.out",
+          },
+          0.22
+        );
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
 
   const updateCarousel = () => {
     const viewportWidth = window.innerWidth;
@@ -75,6 +128,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
   return (
     <section
       id="discography-home-anchor"
+      ref={sectionRef}
       className="section relative min-h-screen flex flex-col items-center justify-center py-20 px-4 overflow-hidden"
       onTouchStart={(e) => {
         const t = e.touches[0];
@@ -112,7 +166,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         }}
       />
 
-      <div className="relative z-10 text-center mb-12">
+      <div ref={titleBlockRef} className="relative z-10 text-center mb-12">
         <h2
           className="mb-3 sm:mb-4 text-red-600 uppercase tracking-[0.12em] sm:tracking-widest"
           style={{
@@ -121,14 +175,30 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
             textShadow: "0 0 30px rgba(220, 38, 38, 0.8)",
           }}
         >
-          Discography
+          <FuzzyText
+            baseIntensity={0.06}
+            hoverIntensity={0.7}
+            enableHover={false}
+            clickEffect={false}
+            glitchMode
+            glitchInterval={1000}
+            glitchDuration={240}
+            fuzzRange={15}
+            direction="both"
+            fontSize="clamp(2rem, 8vw, 3rem)"
+            fontWeight={900}
+            letterSpacing={1}
+            color="#ffffff"
+          >
+            Discography
+          </FuzzyText>
         </h2>
         <p className="text-gray-400 tracking-wide sm:tracking-wider max-w-2xl mx-auto px-2 text-[0.95rem] sm:text-[1.1rem]">
           Choose Album
         </p>
       </div>
 
-      <div className="relative w-full max-w-7xl h-[500px] md:h-[620px]" style={{ perspective: "1500px" }}>
+      <div ref={carouselWrapRef} className="relative w-full max-w-7xl h-[500px] md:h-[620px]" style={{ perspective: "1500px" }}>
         <div
           ref={carouselRef}
           className="absolute inset-0 flex items-center justify-center"
@@ -203,7 +273,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         </button>
       </div>
 
-      <div className="mt-24 flex gap-3">
+      <div ref={dotsRef} className="mt-24 flex gap-3">
         {albums.map((_, index) => (
           <button
             key={index}

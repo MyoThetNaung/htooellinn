@@ -9,6 +9,7 @@ import GallerySection from "./components/GallerySection";
 import AlbumDetail from "./components/AlbumDetail";
 import Footer from "./components/Footer";
 import ShopAndSongRequestSection from "./components/ShopAndSongRequestSection";
+import OpeningIntro from "./components/OpeningIntro";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -120,6 +121,15 @@ export default function App() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [pathname, setPathname] = useState<string>(() => window.location.pathname.toUpperCase());
+  const [showIntro, setShowIntro] = useState<boolean>(() => {
+    if (window.location.pathname.toUpperCase() !== "/") return false;
+    const skipIntro = sessionStorage.getItem("skipHomeIntroOnce") === "1";
+    if (skipIntro) {
+      sessionStorage.removeItem("skipHomeIntroOnce");
+      return false;
+    }
+    return true;
+  });
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -189,12 +199,20 @@ export default function App() {
   };
 
   const handleCloseAlbum = () => {
+    sessionStorage.setItem("skipHomeIntroOnce", "1");
     sessionStorage.setItem("scrollToDiscographySection", "1");
     window.location.assign("/");
   };
 
+  const handleIntroComplete = () => {
+    setShowIntro(false);
+  };
+
   return (
     <div ref={containerRef} className="relative min-h-screen bg-black text-white overflow-x-hidden">
+      {showIntro && pathname === "/" ? (
+        <OpeningIntro covers={albums.map((album) => album.cover)} onComplete={handleIntroComplete} />
+      ) : null}
 
       {selectedAlbum ? (
         <AlbumDetail album={selectedAlbum} onClose={handleCloseAlbum} />

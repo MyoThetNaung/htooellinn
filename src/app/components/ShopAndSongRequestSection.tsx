@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import FuzzyText from "./FuzzyText";
 
 const angelCover = new URL("../../../resource images/Angel Ta Yaw.jpg", import.meta.url).href;
 const minLayNarLalCover = new URL("../../../resource images/Min Lay Nar Lal.jpg", import.meta.url).href;
@@ -72,7 +73,23 @@ export default function ShopAndSongRequestSection() {
               className="mb-10 text-center uppercase tracking-widest text-red-500"
               style={{ fontSize: "clamp(1.7rem, 3.5vw, 2.4rem)", fontWeight: 900 }}
             >
-              Merchandise
+              <FuzzyText
+                baseIntensity={0.06}
+                hoverIntensity={0.7}
+                enableHover={false}
+                clickEffect={false}
+                glitchMode
+                glitchInterval={1020}
+                glitchDuration={230}
+                fuzzRange={14}
+                direction="both"
+                fontSize="clamp(1.7rem, 3.5vw, 2.4rem)"
+                fontWeight={900}
+                letterSpacing={1}
+                color="#ffffff"
+              >
+                Merchandise
+              </FuzzyText>
             </h2>
 
             <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
@@ -129,7 +146,23 @@ export default function ShopAndSongRequestSection() {
                 className="text-center text-red-500 uppercase tracking-widest mb-3"
                 style={{ fontWeight: 800, fontSize: "clamp(1.1rem, 2.5vw, 1.5rem)" }}
               >
-                REQUEST SONG FOR USE
+                <FuzzyText
+                  baseIntensity={0.06}
+                  hoverIntensity={0.7}
+                  enableHover={false}
+                  clickEffect={false}
+                  glitchMode
+                  glitchInterval={980}
+                  glitchDuration={220}
+                  fuzzRange={12}
+                  direction="both"
+                  fontSize="clamp(1.1rem, 2.5vw, 1.5rem)"
+                  fontWeight={900}
+                  letterSpacing={1}
+                  color="#ef4444"
+                >
+                  REQUEST SONG FOR USE
+                </FuzzyText>
               </h3>
               <p className="mb-4 text-center text-gray-300 text-[1rem] sm:text-[1.12rem] leading-relaxed">
                 To use songs for covers, performances, or commercial content, please send a request
@@ -154,6 +187,7 @@ export default function ShopAndSongRequestSection() {
             <div className="relative mb-6">
               <button
                 onClick={() => {
+                  sessionStorage.setItem("skipHomeIntroOnce", "1");
                   sessionStorage.setItem("scrollToMerchSection", "1");
                   window.history.pushState({}, "", "/");
                   setPage("main");
@@ -167,7 +201,23 @@ export default function ShopAndSongRequestSection() {
                 className="pt-12 text-center uppercase tracking-widest text-red-500"
                 style={{ fontSize: "clamp(1.7rem, 3.5vw, 2.4rem)", fontWeight: 900 }}
               >
-                Merchandise
+                <FuzzyText
+                  baseIntensity={0.06}
+                  hoverIntensity={0.7}
+                  enableHover={false}
+                  clickEffect={false}
+                  glitchMode
+                  glitchInterval={1020}
+                  glitchDuration={230}
+                  fuzzRange={14}
+                  direction="both"
+                  fontSize="clamp(1.7rem, 3.5vw, 2.4rem)"
+                  fontWeight={900}
+                  letterSpacing={1}
+                  color="#ffffff"
+                >
+                  Merchandise
+                </FuzzyText>
               </h2>
             </div>
 
@@ -241,6 +291,7 @@ export default function ShopAndSongRequestSection() {
             <div className="relative mb-6">
               <button
                 onClick={() => {
+                  sessionStorage.setItem("skipHomeIntroOnce", "1");
                   sessionStorage.setItem("scrollToRequestSection", "1");
                   window.history.pushState({}, "", "/");
                   setPage("main");
@@ -254,7 +305,23 @@ export default function ShopAndSongRequestSection() {
                 className="pt-12 text-center uppercase tracking-widest text-red-500"
                 style={{ fontSize: "clamp(1.2rem, 3.5vw, 2.2rem)", fontWeight: 900, flex: "1 1 auto" }}
               >
-                REQUEST SONG FOR USE
+                <FuzzyText
+                  baseIntensity={0.06}
+                  hoverIntensity={0.7}
+                  enableHover={false}
+                  clickEffect={false}
+                  glitchMode
+                  glitchInterval={980}
+                  glitchDuration={220}
+                  fuzzRange={12}
+                  direction="both"
+                  fontSize="clamp(1.2rem, 3.5vw, 2.2rem)"
+                  fontWeight={900}
+                  letterSpacing={1}
+                  color="#ef4444"
+                >
+                  REQUEST SONG FOR USE
+                </FuzzyText>
               </h2>
             </div>
 

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import FuzzyText from "./FuzzyText";
 
 const gallery1 = new URL("../../../resource images/gallery/1.jpg", import.meta.url).href;
 const gallery2 = new URL("../../../resource images/gallery/2.jpg", import.meta.url).href;
@@ -82,7 +83,23 @@ export default function GallerySection() {
             textShadow: "0 0 20px rgba(220, 38, 38, 0.5)",
           }}
         >
-          Gallery
+          <FuzzyText
+            baseIntensity={0.06}
+            hoverIntensity={0.7}
+            enableHover={false}
+            clickEffect={false}
+            glitchMode
+            glitchInterval={1200}
+            glitchDuration={230}
+            fuzzRange={16}
+            direction="both"
+            fontSize="clamp(2.5rem, 5vw, 4rem)"
+            fontWeight={900}
+            letterSpacing={1}
+            color="#ffffff"
+          >
+            Gallery
+          </FuzzyText>
         </h2>
 
         <div className="relative">
