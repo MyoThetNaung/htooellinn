@@ -15,19 +15,20 @@ export default function CdPlayerSection() {
       const radioEl = radioRef.current?.getRadioElement() ?? null;
       if (!radioEl) return;
 
-      gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: "top top",
-          end: "+=1100",
-          pin: true,
-          pinSpacing: true,
-          anticipatePin: 1,
-          scrub: 1,
-        },
-      })
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: "+=1100",
+            pin: true,
+            pinSpacing: true,
+            anticipatePin: 1,
+            scrub: 1,
+          },
+        })
         .from(radioEl, {
-          x: -120,
+          x: 160,
           y: 40,
           opacity: 0,
           scale: 0.92,
@@ -52,14 +53,15 @@ export default function CdPlayerSection() {
   return (
     <section
       ref={sectionRef}
-      className="section py-0 md:py-16 min-h-screen px-4 bg-gradient-to-b from-black via-zinc-950 to-black flex items-center justify-center"
+      className="section flex min-h-screen flex-col bg-gradient-to-b from-black via-zinc-950 to-black px-4"
     >
-      <div className="w-full max-w-6xl mx-auto flex flex-col items-center justify-center gap-5 md:gap-8">
-        <h2
-          className="text-center uppercase tracking-[0.35em] text-zinc-200"
-          style={{ fontSize: "clamp(1.2rem, 2.8vw, 2rem)", fontWeight: 800 }}
-        >
+      <h2
+        className="w-full shrink-0 pt-8 text-center uppercase tracking-[0.35em] text-zinc-200 md:pt-12"
+        style={{ fontSize: "clamp(1.2rem, 2.8vw, 2rem)", fontWeight: 800 }}
+      >
+        <div className="flex w-full justify-center">
           <FuzzyText
+            className="block max-w-full shrink-0"
             baseIntensity={0.06}
             hoverIntensity={0.7}
             enableHover={false}
@@ -76,9 +78,14 @@ export default function CdPlayerSection() {
           >
             Listen
           </FuzzyText>
-        </h2>
+        </div>
+      </h2>
 
-        <RetroRadioPlayer ref={radioRef} className="w-full flex flex-col items-center" />
+      <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center pb-10 pt-4 md:pb-14 md:pt-6">
+        <RetroRadioPlayer
+          ref={radioRef}
+          className="flex w-full max-w-6xl flex-col items-center"
+        />
       </div>
     </section>
   );

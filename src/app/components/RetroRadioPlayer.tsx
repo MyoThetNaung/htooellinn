@@ -1,26 +1,52 @@
-import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useRef, useState } from "react";
 
-/** Fixed black station dots (slider does not move). */
 const CHANNEL_CX = [350, 650, 900] as const;
-/** Red line drawn at this x; horizontal `offset` is added via transform (needle moves). */
 const INDICATOR_BASE_X = 550;
 const TUNE_THRESHOLD = 14;
-const SNAP_OFFSETS = CHANNEL_CX.map((cx) => cx - INDICATOR_BASE_X) as readonly [number, number, number];
+const SNAP_OFFSETS: readonly [number, number, number] = [
+  CHANNEL_CX[0] - INDICATOR_BASE_X,
+  CHANNEL_CX[1] - INDICATOR_BASE_X,
+  CHANNEL_CX[2] - INDICATOR_BASE_X,
+];
 const OFFSET_MIN = -400;
 const OFFSET_MAX = 400;
 const FADE_S = 0.45;
 
-/** Analog VU: pivot and needle sweep (degrees, SVG rotate clockwise positive). */
 const VU_PIVOT_L = { x: 330, y: 392 };
 const VU_PIVOT_R = { x: 770, y: 392 };
 const VU_ANGLE_MIN = -52;
 const VU_ANGLE_MAX = 52;
+
+const KNOB = { x: 120, y: 350 };
 
 const TRACKS = [
   { title: "A Chit Lo Khaw Tha Lar", src: new URL("../../../MUSIC/A Chit Lo Khaw Tha Lar.mp3", import.meta.url).href },
   { title: "A Pyan", src: new URL("../../../MUSIC/A Pyan.mp3", import.meta.url).href },
   { title: "Min Lay Nar Lal", src: new URL("../../../MUSIC/Min Lay Nar Lal.mp3", import.meta.url).href },
 ] as const;
+
+/** Skip opening seconds so playback feels like tuning into a station mid-broadcast. */
+const RADIO_INTRO_SKIP_SEC = 3;
+
+function seekPastRadioIntro(a: HTMLAudioElement) {
+  const d = a.duration;
+  if (Number.isFinite(d) && d > RADIO_INTRO_SKIP_SEC + 0.25) {
+    a.currentTime = RADIO_INTRO_SKIP_SEC;
+  }
+}
+
+function playWithRadioIntroSkip(a: HTMLAudioElement) {
+  const start = () => {
+    seekPastRadioIntro(a);
+    void a.play().catch(() => {});
+  };
+  if (a.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    start();
+  } else {
+    a.addEventListener("loadedmetadata", start, { once: true });
+    if (a.readyState === HTMLMediaElement.HAVE_NOTHING) void a.load();
+  }
+}
 
 function nearestSnapOffset(offset: number): number {
   let best = SNAP_OFFSETS[0];
@@ -50,6 +76,94 @@ function fftToLevel(freq: Uint8Array): number {
   return Math.min(1, (sum / freq.length / 255) * 2.1);
 }
 
+/**
+ * Mean of L/R FFT magnitudes in [i0, i1) — each bin is 0–255; average both channels then normalize.
+ */
+function bandEnergy(l: Uint8Array, r: Uint8Array, i0: number, i1: number): number {
+  let sum = 0;
+  let n = 0;
+  const hi = Math.min(i1, l.length, r.length);
+  for (let i = Math.max(0, i0); i < hi; i++) {
+    sum += (l[i] ?? 0) + (r[i] ?? 0);
+    n += 2;
+  }
+  if (n === 0) return 0;
+  return Math.min(1, (sum / n / 255) * 1.95);
+}
+
+/** Peak L/R magnitude in band (0–1). Kicks and hits read much higher than mean alone — matches visible VU better. */
+function bandPeakNorm(l: Uint8Array, r: Uint8Array, i0: number, i1: number): number {
+  let m = 0;
+  const hi = Math.min(i1, l.length, r.length);
+  for (let i = Math.max(0, i0); i < hi; i++) {
+    m = Math.max(m, (l[i] ?? 0) / 255, (r[i] ?? 0) / 255);
+  }
+  return Math.min(1, m);
+}
+
+/**
+ * Four bands left→right, tuned for typical mixes (kick/bass, warmth/body, vocals/instruments, air/hats).
+ * Slightly staggered edges vs classic 120/500/2k/8k so each tube gets more distinct energy.
+ */
+const TUBE_HZ_RANGES: readonly [number, number][] = [
+  [45, 240],
+  [240, 950],
+  [950, 3600],
+  [3600, 12000],
+];
+
+/**
+ * Hz → half-open bin indices [lo, hi). floor(lo) keeps bass energy; ceil(hi) for exclusive end.
+ * Bin k ≈ frequencies [k·sr/fftSize , (k+1)·sr/fftSize).
+ */
+function hzRangeToBinRange(
+  hzLo: number,
+  hzHi: number,
+  sampleRate: number,
+  fftSize: number,
+  binCount: number
+): [number, number] {
+  if (hzHi <= hzLo || binCount < 2) return [1, 2];
+  const lo = Math.max(1, Math.floor((hzLo * fftSize) / sampleRate));
+  const hiEx = Math.min(binCount, Math.ceil((hzHi * fftSize) / sampleRate));
+  return [lo, Math.max(lo + 1, hiEx)];
+}
+
+/**
+ * Per-tube gain so typical mixes feel balanced (treble FFT energy is usually lower than bass/mids).
+ */
+const TUBE_BAND_GAIN = [1.12, 1.02, 1.08, 1.55] as const;
+
+/**
+ * Per-tube 0–1 drive (not pegged): mean + peak, modest gain so 5 segments rarely all max at once.
+ */
+function tubeBandLevel(
+  l: Uint8Array,
+  r: Uint8Array,
+  range: readonly [number, number],
+  tubeIndex: number
+): number {
+  const [lo, hi] = range;
+  const mean = bandEnergy(l, r, lo, hi);
+  const peak = bandPeakNorm(l, r, lo, hi);
+  const mix = mean * 0.42 + peak * 0.58;
+  const g = TUBE_BAND_GAIN[tubeIndex] ?? 1.1;
+  let x = mix * g * 2.25;
+  x = Math.min(1, x);
+  return Math.min(1, x ** 1.05);
+}
+
+const TUBE_COUNT = 4;
+/** Each tube = one VU bar; 5 filaments = 5 segments from bottom (index 4) to top (index 0). */
+const TUBE_SEGMENTS = 5;
+const TUBE_SEG_REF_COUNT = TUBE_COUNT * TUBE_SEGMENTS;
+
+const FILAMENT_LOCAL_CY = 115;
+/** dy order: j=0 top … j=4 bottom — segment fill uses s = 4 - j so level fills bottom→top. */
+const FILAMENT_STACK_DY = [-42.4, -21.2, 0, 21.2, 42.4] as const;
+
+const TUBE_OFFSETS_X = [80, 240, 400, 560] as const;
+
 export type RetroRadioPlayerHandle = { getRadioElement: () => HTMLDivElement | null };
 
 type Props = { className?: string };
@@ -63,6 +177,7 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
   const knob3dId = `knob3d-${uid}`;
   const clipId = `slider-clip-${uid}`;
   const vuFaceId = `vu-face-${uid}`;
+  const speakerGrilleId = `speaker-grille-pattern-${uid}`;
 
   const rootRef = useRef<HTMLDivElement>(null);
   useImperativeHandle(ref, () => ({
@@ -72,7 +187,22 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
   const indicatorRef = useRef<SVGGElement>(null);
   const vuNeedleLRef = useRef<SVGGElement>(null);
   const vuNeedleRRef = useRef<SVGGElement>(null);
+  const vuLabelLRef = useRef<SVGGElement>(null);
+  const vuLabelRRef = useRef<SVGGElement>(null);
+  const vuBlurLId = `vublur-l-${uid}`;
+  const vuBlurRId = `vublur-r-${uid}`;
+  const tubeGlassId = `tube-glass-${uid}`;
+  const tubeFilamentGlowId = `tube-filament-glow-${uid}`;
+  const tubeGlowBlurId = `tube-glow-blur-${uid}`;
+  const tubeBlurSigmaIds = [0, 1, 2, 3].map((i) => `tube-blur-sigma-${uid}-${i}`);
+  const knobRef = useRef<SVGGElement>(null);
   const rafRef = useRef<number>(0);
+  const filamentSegRefs = useRef<(SVGGElement | null)[]>(Array.from({ length: TUBE_SEG_REF_COUNT }, () => null));
+  const tubeSmoothRef = useRef([0, 0, 0, 0]);
+  const tubeIdleRef = useRef([0.06, 0.05, 0.06, 0.05]);
+  /** Resized inside RAF when analysers exist so we never read FFT into zero-length buffers. */
+  const freqBufLRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(0));
+  const freqBufRRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(0));
 
   const offsetRef = useRef(0);
   const smoothOffsetRef = useRef(0);
@@ -83,10 +213,13 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
     active: false,
   });
   const appliedTunedRef = useRef<0 | 1 | 2 | null | undefined>(undefined);
+  /** Which station index is allowed to loop-restart after `ended` (radio-style repeat from skip point). */
+  const playingTrackRef = useRef<number | null>(null);
 
-  const [powered, setPowered] = useState(false);
+  const [powerOn, setPowerOn] = useState(false);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
   const staticGainRef = useRef<GainNode | null>(null);
   const staticNoiseRef = useRef<AudioBufferSourceNode | null>(null);
   const trackGainsRef = useRef<GainNode[] | null>(null);
@@ -106,6 +239,10 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
     const ctx = new AudioContext();
     audioCtxRef.current = ctx;
 
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = 0;
+    masterGainRef.current = masterGain;
+
     const staticGain = ctx.createGain();
     staticGain.gain.value = 0;
     staticGainRef.current = staticGain;
@@ -119,10 +256,10 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
 
     const analyserL = ctx.createAnalyser();
     const analyserR = ctx.createAnalyser();
-    analyserL.fftSize = 256;
-    analyserR.fftSize = 256;
-    analyserL.smoothingTimeConstant = 0.6;
-    analyserR.smoothingTimeConstant = 0.6;
+    analyserL.fftSize = 4096;
+    analyserR.fftSize = 4096;
+    analyserL.smoothingTimeConstant = 0.38;
+    analyserR.smoothingTimeConstant = 0.38;
     analyserLRef.current = analyserL;
     analyserRRef.current = analyserR;
 
@@ -135,11 +272,21 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
       trackGains.push(g);
       const a = new Audio();
       a.src = TRACKS[i].src;
-      a.loop = true;
+      a.loop = false;
       audios.push(a);
     }
     trackGainsRef.current = trackGains;
     audioElsRef.current = audios;
+
+    for (let i = 0; i < TRACKS.length; i++) {
+      audios[i].addEventListener("ended", () => {
+        if (playingTrackRef.current !== i) return;
+        const list = audioElsRef.current;
+        if (!list?.[i]) return;
+        seekPastRadioIntro(list[i]);
+        void list[i].play().catch(() => {});
+      });
+    }
 
     for (let i = 0; i < TRACKS.length; i++) {
       const src = ctx.createMediaElementSource(audios[i]);
@@ -152,9 +299,10 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
     splitter.connect(analyserR, 1);
     splitter.connect(merger, 0, 0);
     splitter.connect(merger, 1, 1);
-    merger.connect(ctx.destination);
+    merger.connect(masterGain);
 
-    staticGain.connect(ctx.destination);
+    staticGain.connect(masterGain);
+    masterGain.connect(ctx.destination);
 
     const noiseDur = 3;
     const noiseBuf = ctx.createBuffer(1, ctx.sampleRate * noiseDur, ctx.sampleRate);
@@ -187,6 +335,7 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
       if (!staticGain || !trackGains || !audios) return;
 
       if (idx === null) {
+        playingTrackRef.current = null;
         rampGain(staticGain, 0.22);
         for (let i = 0; i < TRACKS.length; i++) {
           rampGain(trackGains[i], 0);
@@ -195,11 +344,12 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
         return;
       }
 
+      playingTrackRef.current = idx;
       rampGain(staticGain, 0);
       for (let i = 0; i < TRACKS.length; i++) {
         if (i === idx) {
           rampGain(trackGains[i], 1);
-          void audios[i].play().catch(() => {});
+          playWithRadioIntroSkip(audios[i]);
         } else {
           rampGain(trackGains[i], 0);
           void audios[i].pause();
@@ -208,6 +358,48 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
     },
     [rampGain]
   );
+
+  const silenceOutputs = useCallback(() => {
+    playingTrackRef.current = null;
+    const staticGain = staticGainRef.current;
+    const trackGains = trackGainsRef.current;
+    const audios = audioElsRef.current;
+    if (staticGain) rampGain(staticGain, 0);
+    if (trackGains && audios) {
+      for (let i = 0; i < TRACKS.length; i++) {
+        rampGain(trackGains[i], 0);
+        void audios[i].pause();
+      }
+    }
+  }, [rampGain]);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!powerOn) {
+        appliedTunedRef.current = undefined;
+        const mg = masterGainRef.current;
+        if (mg && audioCtxRef.current) {
+          const t = audioCtxRef.current.currentTime;
+          mg.gain.cancelScheduledValues(t);
+          mg.gain.setValueAtTime(mg.gain.value, t);
+          mg.gain.linearRampToValueAtTime(0, t + 0.25);
+        }
+        silenceOutputs();
+        return;
+      }
+      await ensureAudio();
+      const ctx = audioCtxRef.current;
+      const mg = masterGainRef.current;
+      if (ctx && mg) {
+        const t = ctx.currentTime;
+        mg.gain.cancelScheduledValues(t);
+        mg.gain.setValueAtTime(mg.gain.value, t);
+        mg.gain.linearRampToValueAtTime(1, t + 0.2);
+      }
+      appliedTunedRef.current = undefined;
+    };
+    void run();
+  }, [powerOn, ensureAudio, silenceOutputs]);
 
   useEffect(() => {
     return () => {
@@ -219,11 +411,10 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
 
   const pointerDown = async (e: React.PointerEvent) => {
     e.currentTarget.setPointerCapture(e.pointerId);
-    await ensureAudio();
-    setPowered(true);
     appliedTunedRef.current = undefined;
     dragRef.current = { active: true, startX: e.clientX, startOffset: offsetRef.current };
     snapAnimRef.current = null;
+    if (powerOn) await ensureAudio();
   };
 
   const pointerMove = (e: React.PointerEvent) => {
@@ -243,13 +434,14 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
   const onWheel = async (e: React.WheelEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await ensureAudio();
-    setPowered(true);
     appliedTunedRef.current = undefined;
     const delta = e.deltaX !== 0 ? e.deltaX : e.deltaY;
     offsetRef.current = clampOffset(offsetRef.current + delta * 0.5);
     snapAnimRef.current = null;
+    if (powerOn) await ensureAudio();
   };
+
+  const togglePower = () => setPowerOn((v) => !v);
 
   const smoothVuL = useRef(0.12);
   const smoothVuR = useRef(0.12);
@@ -257,9 +449,6 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
   const idleVuR = useRef(0.16);
 
   useEffect(() => {
-    const freqL = new Uint8Array(analyserLRef.current?.frequencyBinCount ?? 0);
-    const freqR = new Uint8Array(analyserRRef.current?.frequencyBinCount ?? 0);
-
     const setNeedle = (el: SVGGElement | null, level: number, pivot: { x: number; y: number }) => {
       if (!el) return;
       const clamped = Math.min(1, Math.max(0, level));
@@ -292,27 +481,56 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
 
       indicatorRef.current?.setAttribute("transform", `translate(${visualX},0)`);
 
+      const tNorm = (smooth - OFFSET_MIN) / (OFFSET_MAX - OFFSET_MIN);
+      const knobDeg = -78 + Math.min(1, Math.max(0, tNorm)) * 156;
+      knobRef.current?.setAttribute("transform", `rotate(${knobDeg} ${KNOB.x} ${KNOB.y})`);
+
       const tuned = tunedChannelIndex(smooth);
-      if (powered && audioCtxRef.current) {
+      if (powerOn && audioCtxRef.current && masterGainRef.current && masterGainRef.current.gain.value > 0.01) {
         if (tuned !== appliedTunedRef.current) {
           appliedTunedRef.current = tuned;
           applyTunedState(tuned);
         }
+      } else if (!powerOn && appliedTunedRef.current !== undefined) {
+        appliedTunedRef.current = undefined;
       }
 
       const aL = analyserLRef.current;
       const aR = analyserRRef.current;
       let targetL: number;
       let targetR: number;
+      const tubeTargets = [0, 0, 0, 0];
 
-      if (powered && aL && aR && tuned !== null) {
+      if (powerOn && aL && aR && tuned !== null) {
+        const nBin = aL.frequencyBinCount;
+        if (freqBufLRef.current.length !== nBin) {
+          freqBufLRef.current = new Uint8Array(nBin);
+          freqBufRRef.current = new Uint8Array(nBin);
+        }
+        const freqL = freqBufLRef.current;
+        const freqR = freqBufRRef.current;
         aL.getByteFrequencyData(freqL);
         aR.getByteFrequencyData(freqR);
         targetL = fftToLevel(freqL);
         targetR = fftToLevel(freqR);
-      } else {
-        const bump = powered ? 0.055 : 0.022;
-        const bias = powered ? 0.14 : 0.06;
+        const sr = audioCtxRef.current?.sampleRate ?? 44100;
+        const fftSz = aL.fftSize;
+        const bands: number[] = [];
+        for (let t = 0; t < TUBE_COUNT; t++) {
+          const hz = TUBE_HZ_RANGES[t] ?? [45, 240];
+          const binRange = hzRangeToBinRange(hz[0], hz[1], sr, fftSz, nBin);
+          bands.push(tubeBandLevel(freqL, freqR, binRange, t));
+        }
+        const sumBands = bands.reduce((acc, v) => acc + v, 0) + 1e-6;
+        const vuMono = (targetL + targetR) * 0.5;
+        const tubeVuGain = 1.2;
+        for (let t = 0; t < TUBE_COUNT; t++) {
+          const share = (bands[t]! / sumBands) * TUBE_COUNT;
+          tubeTargets[t] = Math.min(1, vuMono * share * tubeVuGain);
+        }
+      } else if (powerOn) {
+        const bump = 0.055;
+        const bias = 0.14;
         idleVuL.current += (Math.random() - 0.5) * bump;
         idleVuR.current += (Math.random() - 0.5) * bump;
         idleVuL.current = idleVuL.current * 0.92 + bias * 0.08;
@@ -321,29 +539,175 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
         idleVuR.current = Math.min(0.58, Math.max(0.06, idleVuR.current));
         targetL = idleVuL.current;
         targetR = idleVuR.current;
+        for (let b = 0; b < TUBE_COUNT; b++) {
+          let v = (tubeIdleRef.current[b] ?? 0.06) + (Math.random() - 0.5) * 0.035;
+          v = Math.min(0.22, Math.max(0.02, v * 0.94 + 0.05 * 0.06));
+          tubeIdleRef.current[b] = v;
+          tubeTargets[b] = v;
+        }
+      } else {
+        targetL = 0.06;
+        targetR = 0.06;
       }
 
-      const follow = tuned !== null && powered ? 0.28 : powered ? 0.14 : 0.08;
+      const follow = powerOn && tuned !== null ? 0.28 : powerOn ? 0.14 : 0.12;
       smoothVuL.current += (targetL - smoothVuL.current) * follow;
       smoothVuR.current += (targetR - smoothVuR.current) * follow;
 
       setNeedle(vuNeedleLRef.current, smoothVuL.current, VU_PIVOT_L);
       setNeedle(vuNeedleRRef.current, smoothVuR.current, VU_PIVOT_R);
 
+      const pulseL = 0.38 + smoothVuL.current * 0.62;
+      const pulseR = 0.38 + smoothVuR.current * 0.62;
+      vuLabelLRef.current?.setAttribute("opacity", String(pulseL));
+      vuLabelRRef.current?.setAttribute("opacity", String(pulseR));
+      const blurL = 1.2 + smoothVuL.current * 6.5;
+      const blurR = 1.2 + smoothVuR.current * 6.5;
+      document.getElementById(vuBlurLId)?.setAttribute("stdDeviation", String(blurL));
+      document.getElementById(vuBlurRId)?.setAttribute("stdDeviation", String(blurR));
+
+      const smoothT = tubeSmoothRef.current;
+      const SEG_OFF = 0.02;
+      const SEG_FULL = 1;
+      const BLUR_DIM = 2;
+      const BLUR_BRIGHT = 14;
+      const segs = filamentSegRefs.current;
+      for (let t = 0; t < TUBE_COUNT; t++) {
+        const tgt = tubeTargets[t] ?? 0;
+        const prev = smoothT[t] ?? 0;
+        const attack = 0.55;
+        const release = 0.08;
+        const k = tgt > prev ? attack : release;
+        smoothT[t] = prev + (tgt - prev) * k;
+        const lvl = Math.min(1, Math.max(0, smoothT[t] ?? 0));
+        const blurSig = BLUR_DIM + (BLUR_BRIGHT - BLUR_DIM) * lvl;
+        document.getElementById(tubeBlurSigmaIds[t] ?? "")?.setAttribute("stdDeviation", String(blurSig));
+        const meter = Math.min(1, lvl ** 1.42);
+        const stack = meter * TUBE_SEGMENTS;
+        for (let j = 0; j < TUBE_SEGMENTS; j++) {
+          const s = TUBE_SEGMENTS - 1 - j;
+          const segAmp = Math.min(1, Math.max(0, stack - s));
+          const op = SEG_OFF + (SEG_FULL - SEG_OFF) * segAmp;
+          segs[t * TUBE_SEGMENTS + j]?.setAttribute("opacity", String(op));
+        }
+      }
+
       rafRef.current = requestAnimationFrame(tick);
     };
 
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [powered, applyTunedState]);
+  }, [powerOn, applyTunedState]);
 
   return (
-    <div ref={rootRef} className={className ?? ""}>
+    <div ref={rootRef} className={`relative ${className ?? ""}`.trim()}>
+      <div
+        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-0 w-full max-w-[800px] -translate-x-1/2"
+        aria-hidden
+      >
+        <svg
+          width="800"
+          height="222"
+          viewBox="0 0 800 222"
+          preserveAspectRatio="xMidYMax meet"
+          className="mx-auto block h-auto w-full"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id={tubeGlassId}>
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.12" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0.02" />
+            </linearGradient>
+            <radialGradient id={tubeFilamentGlowId}>
+              <stop offset="0%" stopColor="#fff6d4" />
+              <stop offset="45%" stopColor="#ffc14a" />
+              <stop offset="100%" stopColor="#ff3a12" />
+            </radialGradient>
+            {[0, 1, 2, 3].map((bi) => (
+              <filter
+                key={bi}
+                id={`${tubeGlowBlurId}-${bi}`}
+                x="-130%"
+                y="-130%"
+                width="360%"
+                height="360%"
+              >
+                <feGaussianBlur
+                  id={tubeBlurSigmaIds[bi]}
+                  in="SourceGraphic"
+                  stdDeviation="5"
+                  result="blur"
+                />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            ))}
+          </defs>
+
+          <rect x="80" y="210" width="640" height="12" fill="#333" />
+
+          {TUBE_OFFSETS_X.map((tx, i) => (
+            <g key={i} transform={`translate(${tx},20)`}>
+              <path
+                d="M20 180 L20 60 Q20 20 60 20 Q100 20 100 60 L100 180 Z"
+                fill="#111"
+                stroke="#555"
+              />
+              <path
+                d="M20 180 L20 60 Q20 20 60 20 Q100 20 100 60 L100 180 Z"
+                fill={`url(#${tubeGlassId})`}
+              />
+              <line x1="40" y1="60" x2="40" y2="170" stroke="#666" />
+              <line x1="80" y1="60" x2="80" y2="170" stroke="#666" />
+              <rect x="45" y="70" width="30" height="70" fill="#222" />
+              <rect x="48" y="75" width="24" height="60" fill="#2a2a2a" />
+              <g stroke="#444">
+                <line x1="45" y1="85" x2="75" y2="85" />
+                <line x1="45" y1="100" x2="75" y2="100" />
+                <line x1="45" y1="115" x2="75" y2="115" />
+              </g>
+              <g className="filament" pointerEvents="none">
+                {FILAMENT_STACK_DY.map((dy, j) => {
+                  const segIdx = i * TUBE_SEGMENTS + j;
+                  return (
+                    <g
+                      key={j}
+                      ref={(el) => {
+                        filamentSegRefs.current[segIdx] = el;
+                        el?.setAttribute("opacity", "0.02");
+                      }}
+                      transform={`translate(0,${dy})`}
+                    >
+                      <ellipse
+                        cx="60"
+                        cy={FILAMENT_LOCAL_CY}
+                        rx="13"
+                        ry="5.5"
+                        fill={`url(#${tubeFilamentGlowId})`}
+                        filter={`url(#${tubeGlowBlurId}-${i})`}
+                      />
+                      <path
+                        d={`M45 ${FILAMENT_LOCAL_CY} Q50 ${FILAMENT_LOCAL_CY - 8} 55 ${FILAMENT_LOCAL_CY} Q60 ${FILAMENT_LOCAL_CY + 8} 65 ${FILAMENT_LOCAL_CY} Q70 ${FILAMENT_LOCAL_CY - 8} 75 ${FILAMENT_LOCAL_CY}`}
+                        stroke="#ffcc66"
+                        strokeWidth="1.5"
+                        fill="none"
+                      />
+                    </g>
+                  );
+                })}
+              </g>
+            </g>
+          ))}
+        </svg>
+      </div>
+
       <svg
         viewBox="0 0 1100 550"
         className="w-full max-w-[min(100%,1100px)] mx-auto h-auto block touch-none"
         role="img"
-        aria-label="Radio: drag or scroll on the strip to move the red line over a station"
+        aria-label="Radio: power on, then drag or scroll on the strip to tune"
       >
         <defs>
           <linearGradient id={woodId}>
@@ -375,6 +739,25 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
             <stop offset="35%" stopColor="#f5e6b8" />
             <stop offset="100%" stopColor="#e2c96a" />
           </linearGradient>
+          <filter id={`vu-red-glow-l-${uid}`} x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur id={vuBlurLId} in="SourceGraphic" stdDeviation="2.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id={`vu-red-glow-r-${uid}`} x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur id={vuBlurRId} in="SourceGraphic" stdDeviation="2.5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <pattern id={speakerGrilleId} width="9" height="9" patternUnits="userSpaceOnUse">
+            <rect width="9" height="9" fill="#1c1810" />
+            <path d="M 0 0 H 9 M 0 0 V 9" fill="none" stroke="#4a4336" strokeWidth="0.55" />
+            <path d="M 4.5 0 V 9 M 0 4.5 H 9" fill="none" stroke="#2e2920" strokeWidth="0.35" opacity="0.85" />
+          </pattern>
         </defs>
 
         <rect x="20" y="20" width="1060" height="510" rx="40" fill={`url(#${woodId})`} />
@@ -460,15 +843,16 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
         </g>
 
         <g ref={indicatorRef} transform="translate(0,0)" pointerEvents="none">
-          <line x1="550" y1="140" x2="550" y2="230" stroke="red" strokeWidth="6" strokeLinecap="square" />
+          <line x1="550" y1="138" x2="550" y2="232" stroke="#b30000" strokeWidth="12" strokeLinecap="round" />
+          <line x1="550" y1="142" x2="550" y2="228" stroke="#ff3030" strokeWidth="5" strokeLinecap="round" />
         </g>
 
         <rect
           x="150"
-          y="150"
+          y="140"
           width="800"
-          height="70"
-          rx="12"
+          height="100"
+          rx="14"
           fill="transparent"
           className="cursor-grab active:cursor-grabbing outline-none"
           style={{ touchAction: "none" }}
@@ -493,23 +877,21 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
             stroke="#9a8648"
             strokeWidth="1.5"
           />
-          <path
-            d="M 272 388 A 58 58 0 0 1 388 388"
-            fill="none"
-            stroke="#6b5c3a"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <g stroke="#4a3f28" strokeWidth="1.5" strokeLinecap="round">
-            <line x1="278" y1="375" x2="282" y2="368" />
-            <line x1="302" y1="352" x2="306" y2="345" />
-            <line x1="330" y1="332" x2="330" y2="324" />
-            <line x1="358" y1="352" x2="354" y2="345" />
-            <line x1="382" y1="375" x2="378" y2="368" />
+          <g ref={vuLabelLRef} opacity="0.85" pointerEvents="none">
+            <text
+              x="330"
+              y="292"
+              textAnchor="middle"
+              fill="#ff1a1a"
+              fontSize="30"
+              fontWeight="800"
+              fontFamily="ui-monospace, monospace"
+              letterSpacing="0.22em"
+              filter={`url(#vu-red-glow-l-${uid})`}
+            >
+              VU
+            </text>
           </g>
-          <text x="330" y="418" textAnchor="middle" fill="#6b5c3a" fontSize="11" fontFamily="ui-monospace, monospace">
-            VU
-          </text>
           <g ref={vuNeedleLRef} transform={`rotate(${VU_ANGLE_MIN} ${VU_PIVOT_L.x} ${VU_PIVOT_L.y})`}>
             <line
               x1={VU_PIVOT_L.x}
@@ -524,6 +906,31 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
           </g>
         </g>
 
+        <g id="radio-speaker" pointerEvents="none">
+          <rect x="460" y="260" width="180" height="180" rx="16" fill="#15120e" stroke="#3d3628" strokeWidth="2" />
+          <rect
+            x="468"
+            y="268"
+            width="164"
+            height="164"
+            rx="11"
+            fill={`url(#${speakerGrilleId})`}
+            stroke="#9a8648"
+            strokeWidth="1.2"
+          />
+          <rect
+            x="472"
+            y="272"
+            width="156"
+            height="156"
+            rx="8"
+            fill="none"
+            stroke="#0d0b08"
+            strokeWidth="1"
+            opacity="0.45"
+          />
+        </g>
+
         <g id="vu-right" pointerEvents="none">
           <rect x="658" y="258" width="224" height="184" rx="18" fill="#15120e" stroke="#3d3628" strokeWidth="2" />
           <rect
@@ -536,23 +943,21 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
             stroke="#9a8648"
             strokeWidth="1.5"
           />
-          <path
-            d="M 712 388 A 58 58 0 0 1 828 388"
-            fill="none"
-            stroke="#6b5c3a"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          <g stroke="#4a3f28" strokeWidth="1.5" strokeLinecap="round">
-            <line x1="718" y1="375" x2="722" y2="368" />
-            <line x1="742" y1="352" x2="746" y2="345" />
-            <line x1="770" y1="332" x2="770" y2="324" />
-            <line x1="798" y1="352" x2="794" y2="345" />
-            <line x1="822" y1="375" x2="818" y2="368" />
+          <g ref={vuLabelRRef} opacity="0.85" pointerEvents="none">
+            <text
+              x="770"
+              y="292"
+              textAnchor="middle"
+              fill="#ff1a1a"
+              fontSize="30"
+              fontWeight="800"
+              fontFamily="ui-monospace, monospace"
+              letterSpacing="0.22em"
+              filter={`url(#vu-red-glow-r-${uid})`}
+            >
+              VU
+            </text>
           </g>
-          <text x="770" y="418" textAnchor="middle" fill="#6b5c3a" fontSize="11" fontFamily="ui-monospace, monospace">
-            VU
-          </text>
           <g ref={vuNeedleRRef} transform={`rotate(${VU_ANGLE_MIN} ${VU_PIVOT_R.x} ${VU_PIVOT_R.y})`}>
             <line
               x1={VU_PIVOT_R.x}
@@ -567,21 +972,67 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
           </g>
         </g>
 
-        <circle cx="550" cy="330" r="10" fill="#00ff66" opacity={powered ? 1 : 0.35} />
-        <circle cx="550" cy="330" r="5" fill="#ccffcc" opacity={powered ? 1 : 0.35} />
-
-        <g>
-          <circle cx="120" cy="350" r="40" fill={`url(#${knob3dId})`} />
-          <circle cx="120" cy="350" r="20" fill="#222" />
-          <line x1="120" y1="350" x2="120" y2="310" stroke="#fff" strokeWidth="3" />
+        <g
+          role="button"
+          tabIndex={0}
+          cursor="pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePower();
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              togglePower();
+            }
+          }}
+        >
+          <circle
+            cx="960"
+            cy="340"
+            r="46"
+            fill={powerOn ? "#1a3d24" : "#252525"}
+            stroke={powerOn ? "#4ae070" : "#555"}
+            strokeWidth="3"
+          />
+          <circle
+            cx="960"
+            cy="340"
+            r="38"
+            fill="none"
+            stroke={powerOn ? "#2d8f45" : "#444"}
+            strokeWidth="1"
+            opacity="0.85"
+          />
+          <text
+            x="960"
+            y="334"
+            textAnchor="middle"
+            fill={powerOn ? "#c8ffd4" : "#999"}
+            fontSize="11"
+            fontWeight="800"
+            letterSpacing="0.06em"
+          >
+            PWR
+          </text>
+          <text x="960" y="352" textAnchor="middle" fill={powerOn ? "#7ecf8f" : "#777"} fontSize="10" fontWeight="600">
+            {powerOn ? "ON" : "OFF"}
+          </text>
         </g>
 
-        <g>
-          <circle cx="980" cy="350" r="40" fill={`url(#${knob3dId})`} />
-          <circle cx="980" cy="350" r="20" fill="#222" />
-          <line x1="980" y1="350" x2="980" y2="310" stroke="#fff" strokeWidth="3" />
+        <g ref={knobRef} transform={`rotate(0 ${KNOB.x} ${KNOB.y})`} pointerEvents="none">
+          <circle cx={KNOB.x} cy={KNOB.y} r="40" fill={`url(#${knob3dId})`} />
+          <circle cx={KNOB.x} cy={KNOB.y} r="20" fill="#222" />
+          <line x1={KNOB.x} y1={KNOB.y} x2={KNOB.x} y2={KNOB.y - 32} stroke="#fff" strokeWidth="3" />
         </g>
       </svg>
+
+      <p
+        className="text-center text-sm sm:text-base tracking-wide text-zinc-400 mt-3 px-4"
+        style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif" }}
+      >
+        Tune Radio to listening song.
+      </p>
     </div>
   );
 });
