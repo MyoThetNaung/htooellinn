@@ -66,33 +66,36 @@ export default function ShopAndSongRequestSection() {
       {page === "main" ? (
         <section
           id="merchandise-home-anchor"
-          className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black"
+          className="section flex flex-col items-center py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black"
         >
-          <div className="max-w-6xl mx-auto">
-            <h2
-              className="mb-10 text-center uppercase tracking-widest text-red-500"
-              style={{ fontSize: "clamp(1.7rem, 3.5vw, 2.4rem)", fontWeight: 900 }}
-            >
-              <FuzzyText
-                baseIntensity={0.06}
-                hoverIntensity={0.7}
-                enableHover={false}
-                clickEffect={false}
-                glitchMode
-                glitchInterval={1020}
-                glitchDuration={230}
-                fuzzRange={14}
-                direction="both"
-                fontSize="clamp(1.7rem, 3.5vw, 2.4rem)"
-                fontWeight={900}
-                letterSpacing={1}
-                color="#ffffff"
+          <div className="w-full max-w-6xl mx-auto flex flex-col items-center">
+            <div className="mb-10 flex w-full justify-center px-1 sm:px-2">
+              <h2
+                className="flex w-full flex-col items-center justify-center text-center uppercase tracking-widest text-red-500"
+                style={{ fontSize: "clamp(1.7rem, 3.5vw, 2.4rem)", fontWeight: 900 }}
               >
-                Merchandise
-              </FuzzyText>
-            </h2>
+                <FuzzyText
+                  className="mx-auto block max-w-full"
+                  baseIntensity={0.06}
+                  hoverIntensity={0.7}
+                  enableHover={false}
+                  clickEffect={false}
+                  glitchMode
+                  glitchInterval={1020}
+                  glitchDuration={230}
+                  fuzzRange={14}
+                  direction="both"
+                  fontSize="clamp(1.7rem, 3.5vw, 2.4rem)"
+                  fontWeight={900}
+                  letterSpacing={1}
+                  color="#ffffff"
+                >
+                  Merchandise
+                </FuzzyText>
+              </h2>
+            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
+            <div className="grid w-full max-w-2xl grid-cols-2 gap-4 sm:max-w-none">
               {merch.slice(0, 2).map((item) => (
                 <div
                   key={item.id}
@@ -140,30 +143,33 @@ export default function ShopAndSongRequestSection() {
 
             <div
               id="request-song-home-anchor"
-              className="mt-12 max-w-3xl mx-auto rounded-xl border border-red-600/20 bg-zinc-900/40 p-6"
+              className="mt-12 w-full max-w-3xl mx-auto flex flex-col items-center rounded-xl border border-red-600/20 bg-zinc-900/40 p-6"
             >
-              <h3
-                className="text-center text-red-500 uppercase tracking-widest mb-3"
-                style={{ fontWeight: 800, fontSize: "clamp(1.1rem, 2.5vw, 1.5rem)" }}
-              >
-                <FuzzyText
-                  baseIntensity={0.06}
-                  hoverIntensity={0.7}
-                  enableHover={false}
-                  clickEffect={false}
-                  glitchMode
-                  glitchInterval={980}
-                  glitchDuration={220}
-                  fuzzRange={12}
-                  direction="both"
-                  fontSize="clamp(1.1rem, 2.5vw, 1.5rem)"
-                  fontWeight={900}
-                  letterSpacing={1}
-                  color="#ef4444"
+              <div className="mb-3 flex w-full justify-center">
+                <h3
+                  className="flex w-full max-w-3xl flex-col items-center justify-center text-center text-red-500 uppercase tracking-widest"
+                  style={{ fontWeight: 800, fontSize: "clamp(1.1rem, 2.5vw, 1.5rem)" }}
                 >
-                  REQUEST SONG FOR USE
-                </FuzzyText>
-              </h3>
+                  <FuzzyText
+                    className="mx-auto block max-w-full"
+                    baseIntensity={0.06}
+                    hoverIntensity={0.7}
+                    enableHover={false}
+                    clickEffect={false}
+                    glitchMode
+                    glitchInterval={980}
+                    glitchDuration={220}
+                    fuzzRange={12}
+                    direction="both"
+                    fontSize="clamp(1.1rem, 2.5vw, 1.5rem)"
+                    fontWeight={900}
+                    letterSpacing={1}
+                    color="#ef4444"
+                  >
+                    REQUEST SONG FOR USE
+                  </FuzzyText>
+                </h3>
+              </div>
               <p className="mb-4 text-center text-gray-300 text-[1rem] sm:text-[1.12rem] leading-relaxed">
                 To use songs for covers, performances, or commercial content, please send a request
                 with full project details. All uses require artist approval.
@@ -184,21 +190,10 @@ export default function ShopAndSongRequestSection() {
       ) : page === "merch" ? (
         <section className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
           <div className="max-w-6xl mx-auto">
-            <div className="relative mb-6">
-              <button
-                onClick={() => {
-                  sessionStorage.setItem("skipHomeIntroOnce", "1");
-                  sessionStorage.setItem("scrollToMerchSection", "1");
-                  window.history.pushState({}, "", "/");
-                  setPage("main");
-                  window.dispatchEvent(new Event("popstate"));
-                }}
-                className="absolute right-0 top-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
-              >
-                Back
-              </button>
+            <div className="mb-6 flex w-full items-center gap-3">
+              <div className="min-w-0 flex-1" aria-hidden />
               <h2
-                className="pt-12 text-center uppercase tracking-widest text-red-500"
+                className="min-w-0 shrink text-center uppercase tracking-widest text-red-500 px-2"
                 style={{ fontSize: "clamp(1.7rem, 3.5vw, 2.4rem)", fontWeight: 900 }}
               >
                 <FuzzyText
@@ -219,6 +214,21 @@ export default function ShopAndSongRequestSection() {
                   Merchandise
                 </FuzzyText>
               </h2>
+              <div className="flex min-w-0 flex-1 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem("skipHomeIntroOnce", "1");
+                    sessionStorage.setItem("scrollToMerchSection", "1");
+                    window.history.pushState({}, "", "/");
+                    setPage("main");
+                    window.dispatchEvent(new Event("popstate"));
+                  }}
+                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
+                >
+                  Back
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -247,23 +257,27 @@ export default function ShopAndSongRequestSection() {
       ) : page === "product" ? (
         <section className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
           <div className="max-w-4xl mx-auto">
-            <div className="relative mb-6">
-              <button
-                onClick={() => {
-                  window.history.pushState({}, "", "/MERCHANDISE");
-                  setPage("merch");
-                  window.dispatchEvent(new Event("popstate"));
-                }}
-                className="absolute right-0 top-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
-              >
-                Back
-              </button>
+            <div className="mb-6 flex w-full items-center gap-3">
+              <div className="min-w-0 flex-1" aria-hidden />
               <h2
-                className="pt-12 text-center uppercase tracking-widest text-red-500"
-                style={{ fontSize: "clamp(1.3rem, 3.5vw, 2.2rem)", fontWeight: 900, flex: "1 1 auto" }}
+                className="min-w-0 shrink text-center uppercase tracking-widest text-red-500 px-2"
+                style={{ fontSize: "clamp(1.3rem, 3.5vw, 2.2rem)", fontWeight: 900 }}
               >
                 PRODUCT ITEM
               </h2>
+              <div className="flex min-w-0 flex-1 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.history.pushState({}, "", "/MERCHANDISE");
+                    setPage("merch");
+                    window.dispatchEvent(new Event("popstate"));
+                  }}
+                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
+                >
+                  Back
+                </button>
+              </div>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 rounded-xl border border-red-600/20 bg-zinc-900/40 p-5">
@@ -288,22 +302,11 @@ export default function ShopAndSongRequestSection() {
       ) : (
         <section className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
           <div className="max-w-6xl mx-auto">
-            <div className="relative mb-6">
-              <button
-                onClick={() => {
-                  sessionStorage.setItem("skipHomeIntroOnce", "1");
-                  sessionStorage.setItem("scrollToRequestSection", "1");
-                  window.history.pushState({}, "", "/");
-                  setPage("main");
-                  window.dispatchEvent(new Event("popstate"));
-                }}
-                className="absolute right-0 top-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
-              >
-                Back
-              </button>
+            <div className="mb-6 flex w-full items-center gap-3">
+              <div className="min-w-0 flex-1" aria-hidden />
               <h2
-                className="pt-12 text-center uppercase tracking-widest text-red-500"
-                style={{ fontSize: "clamp(1.2rem, 3.5vw, 2.2rem)", fontWeight: 900, flex: "1 1 auto" }}
+                className="min-w-0 shrink text-center uppercase tracking-widest text-red-500 px-2"
+                style={{ fontSize: "clamp(1.2rem, 3.5vw, 2.2rem)", fontWeight: 900 }}
               >
                 <FuzzyText
                   baseIntensity={0.06}
@@ -323,6 +326,21 @@ export default function ShopAndSongRequestSection() {
                   REQUEST SONG FOR USE
                 </FuzzyText>
               </h2>
+              <div className="flex min-w-0 flex-1 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem("skipHomeIntroOnce", "1");
+                    sessionStorage.setItem("scrollToRequestSection", "1");
+                    window.history.pushState({}, "", "/");
+                    setPage("main");
+                    window.dispatchEvent(new Event("popstate"));
+                  }}
+                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
+                >
+                  Back
+                </button>
+              </div>
             </div>
 
             <div className="max-w-xl mx-auto">

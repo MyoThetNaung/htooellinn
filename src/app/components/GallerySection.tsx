@@ -73,10 +73,10 @@ export default function GallerySection() {
   };
 
   return (
-    <div ref={sectionRef} className="section min-h-screen py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
-      <div className="max-w-7xl mx-auto">
+    <div ref={sectionRef} className="section flex min-h-screen w-full flex-col items-center py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
+      <div className="w-full max-w-7xl mx-auto flex flex-col items-center">
         <h2
-          className="mb-16 text-center uppercase tracking-widest"
+          className="mb-16 flex w-full flex-col items-center justify-center text-center uppercase tracking-widest"
           style={{
             fontSize: "clamp(2.5rem, 5vw, 4rem)",
             fontWeight: 800,
@@ -84,6 +84,7 @@ export default function GallerySection() {
           }}
         >
           <FuzzyText
+            className="mx-auto block max-w-full"
             baseIntensity={0.06}
             hoverIntensity={0.7}
             enableHover={false}

@@ -10,6 +10,9 @@ const SNAP_OFFSETS: readonly [number, number, number] = [
 ];
 const OFFSET_MIN = -400;
 const OFFSET_MAX = 400;
+/** Snap to a station only when this close (offset units); larger = freer tuning on touch. */
+const SNAP_PULL_PX = 88;
+const SNAP_ANIM_MS = 420;
 const FADE_S = 0.45;
 
 const VU_PIVOT_L = { x: 330, y: 392 };
@@ -426,12 +429,18 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
   const endDrag = () => {
     if (!dragRef.current.active) return;
     dragRef.current.active = false;
-    const target = nearestSnapOffset(offsetRef.current);
-    const from = offsetRef.current;
-    snapAnimRef.current = { from, to: target, t0: performance.now(), dur: 340 };
+    const raw = offsetRef.current;
+    const nearest = nearestSnapOffset(raw);
+    const target = Math.abs(raw - nearest) <= SNAP_PULL_PX ? nearest : raw;
+    if (Math.abs(target - raw) < 0.5) {
+      snapAnimRef.current = null;
+      return;
+    }
+    snapAnimRef.current = { from: raw, to: target, t0: performance.now(), dur: SNAP_ANIM_MS };
   };
 
   const onWheel = async (e: React.WheelEvent) => {
+    if (!e.shiftKey) return;
     e.preventDefault();
     e.stopPropagation();
     appliedTunedRef.current = undefined;
@@ -705,9 +714,9 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
 
       <svg
         viewBox="0 0 1100 550"
-        className="w-full max-w-[min(100%,1100px)] mx-auto h-auto block touch-none"
+        className="w-full max-w-[min(100%,1100px)] mx-auto h-auto block touch-manipulation"
         role="img"
-        aria-label="Radio: power on, then drag or scroll on the strip to tune"
+        aria-label="Radio: use the power button, then drag or Shift+scroll on the strip to tune"
       >
         <defs>
           <linearGradient id={woodId}>
@@ -862,7 +871,7 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
           onPointerCancel={endDrag}
           onLostPointerCapture={endDrag}
           onWheel={onWheel}
-          aria-label="Tuning: drag or scroll to move the red line over a station dot"
+          aria-label="Tuning: drag or Shift+scroll to move the needle over a station"
         />
 
         <g id="vu-left" pointerEvents="none">
@@ -1028,10 +1037,10 @@ const RetroRadioPlayer = forwardRef<RetroRadioPlayerHandle, Props>(function Retr
       </svg>
 
       <p
-        className="text-center text-sm sm:text-base tracking-wide text-zinc-400 mt-3 px-4"
+        className="text-center text-sm sm:text-base tracking-wide text-white mt-3 px-4"
         style={{ fontFamily: "ui-sans-serif, system-ui, sans-serif" }}
       >
-        Tune Radio to listening song.
+        Power On and Tune radio for music.
       </p>
     </div>
   );

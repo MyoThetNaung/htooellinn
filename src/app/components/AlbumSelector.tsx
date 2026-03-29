@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Album } from "../App";
 import FuzzyText from "./FuzzyText";
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface AlbumSelectorProps {
   albums: Album[];
@@ -35,13 +38,14 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
           pinSpacing: true,
           anticipatePin: 1,
           scrub: 1,
+          invalidateOnRefresh: true,
         },
       });
 
       tl.from(
         titleBlockRef.current,
         {
-          y: 170,
+          y: 140,
           opacity: 0,
           scale: 0.98,
           ease: "power3.out",
@@ -51,7 +55,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         .from(
           carouselWrapRef.current,
           {
-            y: 240,
+            y: 200,
             opacity: 0,
             scale: 0.96,
             ease: "power3.out",
@@ -61,7 +65,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         .from(
           dotsRef.current,
           {
-            y: 130,
+            y: 100,
             opacity: 0,
             ease: "power3.out",
           },
@@ -69,7 +73,14 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         );
     }, sectionRef);
 
-    return () => ctx.revert();
+    const refresh = () => ScrollTrigger.refresh();
+    window.requestAnimationFrame(refresh);
+    const t = window.setTimeout(refresh, 300);
+
+    return () => {
+      window.clearTimeout(t);
+      ctx.revert();
+    };
   }, []);
 
   const updateCarousel = () => {
@@ -129,7 +140,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
     <section
       id="discography-home-anchor"
       ref={sectionRef}
-      className="section relative min-h-screen flex flex-col items-center justify-center py-20 px-4 overflow-hidden"
+      className="section relative flex min-h-[100dvh] min-h-screen flex-col items-center justify-start overflow-hidden px-4 pb-14 pt-0 sm:pb-16 sm:pt-2 md:pb-20 md:pt-4"
       onTouchStart={(e) => {
         const t = e.touches[0];
         touchStartRef.current = { x: t.clientX, y: t.clientY };
@@ -166,9 +177,12 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         }}
       />
 
-      <div ref={titleBlockRef} className="relative z-10 text-center mb-12">
+      <div
+        ref={titleBlockRef}
+        className="relative z-10 mb-3 flex w-full flex-col items-center sm:mb-6 md:mb-8"
+      >
         <h2
-          className="mb-3 sm:mb-4 text-red-600 uppercase tracking-[0.12em] sm:tracking-widest"
+          className="mb-3 flex w-full flex-col items-center justify-center text-center text-red-600 uppercase tracking-[0.12em] sm:mb-4 sm:tracking-widest"
           style={{
             fontSize: "clamp(2rem, 8vw, 3rem)",
             fontWeight: 900,
@@ -176,6 +190,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
           }}
         >
           <FuzzyText
+            className="mx-auto block max-w-full"
             baseIntensity={0.06}
             hoverIntensity={0.7}
             enableHover={false}
@@ -193,12 +208,16 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
             Discography
           </FuzzyText>
         </h2>
-        <p className="text-gray-400 tracking-wide sm:tracking-wider max-w-2xl mx-auto px-2 text-[0.95rem] sm:text-[1.1rem]">
+        <p className="w-full max-w-2xl px-2 text-center text-gray-400 tracking-wide sm:tracking-wider text-[0.95rem] sm:text-[1.1rem]">
           Choose Album
         </p>
       </div>
 
-      <div ref={carouselWrapRef} className="relative w-full max-w-7xl h-[500px] md:h-[620px]" style={{ perspective: "1500px" }}>
+      <div
+        ref={carouselWrapRef}
+        className="relative h-[min(380px,50svh)] w-full max-w-7xl sm:h-[460px] md:h-[600px]"
+        style={{ perspective: "1500px" }}
+      >
         <div
           ref={carouselRef}
           className="absolute inset-0 flex items-center justify-center"
@@ -273,7 +292,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         </button>
       </div>
 
-      <div ref={dotsRef} className="mt-24 flex gap-3">
+      <div ref={dotsRef} className="mt-4 flex gap-3 md:mt-10">
         {albums.map((_, index) => (
           <button
             key={index}
@@ -290,3 +309,5 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
     </section>
   );
 }
+
+
