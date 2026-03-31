@@ -66,7 +66,7 @@ export default function ShopAndSongRequestSection() {
       {page === "main" ? (
         <section
           id="merchandise-home-anchor"
-          className="section flex flex-col items-center py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black"
+          className="section flex flex-col items-center py-20 px-4"
         >
           <div className="w-full max-w-6xl mx-auto flex flex-col items-center">
             <div className="mb-10 flex w-full justify-center px-1 sm:px-2">
@@ -188,15 +188,30 @@ export default function ShopAndSongRequestSection() {
           </div>
         </section>
       ) : page === "merch" ? (
-        <section className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
+        <section className="section py-20 px-4">
           <div className="max-w-6xl mx-auto">
-            <div className="mb-6 flex w-full items-center gap-3">
-              <div className="min-w-0 flex-1" aria-hidden />
+            <div className="mb-8 flex w-full flex-col gap-4">
+              <div className="flex w-full justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem("skipHomeIntroOnce", "1");
+                    sessionStorage.setItem("scrollToMerchSection", "1");
+                    window.history.pushState({}, "", "/");
+                    setPage("main");
+                    window.dispatchEvent(new Event("popstate"));
+                  }}
+                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
+                >
+                  Back
+                </button>
+              </div>
               <h2
-                className="min-w-0 shrink text-center uppercase tracking-widest text-red-500 px-2"
+                className="flex w-full flex-col items-center justify-center text-center uppercase tracking-widest text-red-500 px-2"
                 style={{ fontSize: "clamp(1.7rem, 3.5vw, 2.4rem)", fontWeight: 900 }}
               >
                 <FuzzyText
+                  className="mx-auto block max-w-full"
                   baseIntensity={0.06}
                   hoverIntensity={0.7}
                   enableHover={false}
@@ -214,21 +229,6 @@ export default function ShopAndSongRequestSection() {
                   Merchandise
                 </FuzzyText>
               </h2>
-              <div className="flex min-w-0 flex-1 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sessionStorage.setItem("skipHomeIntroOnce", "1");
-                    sessionStorage.setItem("scrollToMerchSection", "1");
-                    window.history.pushState({}, "", "/");
-                    setPage("main");
-                    window.dispatchEvent(new Event("popstate"));
-                  }}
-                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
-                >
-                  Back
-                </button>
-              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
@@ -255,17 +255,10 @@ export default function ShopAndSongRequestSection() {
           </div>
         </section>
       ) : page === "product" ? (
-        <section className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
+        <section className="section py-20 px-4">
           <div className="max-w-4xl mx-auto">
-            <div className="mb-6 flex w-full items-center gap-3">
-              <div className="min-w-0 flex-1" aria-hidden />
-              <h2
-                className="min-w-0 shrink text-center uppercase tracking-widest text-red-500 px-2"
-                style={{ fontSize: "clamp(1.3rem, 3.5vw, 2.2rem)", fontWeight: 900 }}
-              >
-                PRODUCT ITEM
-              </h2>
-              <div className="flex min-w-0 flex-1 justify-end">
+            <div className="mb-8 flex w-full flex-col gap-4">
+              <div className="flex w-full justify-end">
                 <button
                   type="button"
                   onClick={() => {
@@ -278,6 +271,12 @@ export default function ShopAndSongRequestSection() {
                   Back
                 </button>
               </div>
+              <h2
+                className="w-full text-center uppercase tracking-widest text-red-500 px-2"
+                style={{ fontSize: "clamp(1.3rem, 3.5vw, 2.2rem)", fontWeight: 900 }}
+              >
+                PRODUCT ITEM
+              </h2>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 rounded-xl border border-red-600/20 bg-zinc-900/40 p-5">
@@ -300,15 +299,30 @@ export default function ShopAndSongRequestSection() {
           </div>
         </section>
       ) : (
-        <section className="section py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
+        <section className="section py-20 px-4">
           <div className="max-w-6xl mx-auto">
-            <div className="mb-6 flex w-full items-center gap-3">
-              <div className="min-w-0 flex-1" aria-hidden />
+            <div className="mb-8 flex w-full flex-col gap-4">
+              <div className="flex w-full justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sessionStorage.setItem("skipHomeIntroOnce", "1");
+                    sessionStorage.setItem("scrollToRequestSection", "1");
+                    window.history.pushState({}, "", "/");
+                    setPage("main");
+                    window.dispatchEvent(new Event("popstate"));
+                  }}
+                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
+                >
+                  Back
+                </button>
+              </div>
               <h2
-                className="min-w-0 shrink text-center uppercase tracking-widest text-red-500 px-2"
+                className="flex w-full flex-col items-center justify-center text-center uppercase tracking-widest text-red-500 px-2"
                 style={{ fontSize: "clamp(1.2rem, 3.5vw, 2.2rem)", fontWeight: 900 }}
               >
                 <FuzzyText
+                  className="mx-auto block max-w-full"
                   baseIntensity={0.06}
                   hoverIntensity={0.7}
                   enableHover={false}
@@ -326,21 +340,6 @@ export default function ShopAndSongRequestSection() {
                   REQUEST SONG FOR USE
                 </FuzzyText>
               </h2>
-              <div className="flex min-w-0 flex-1 justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    sessionStorage.setItem("skipHomeIntroOnce", "1");
-                    sessionStorage.setItem("scrollToRequestSection", "1");
-                    window.history.pushState({}, "", "/");
-                    setPage("main");
-                    window.dispatchEvent(new Event("popstate"));
-                  }}
-                  className="shrink-0 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-red-600/20 rounded-lg text-xs uppercase tracking-widest"
-                >
-                  Back
-                </button>
-              </div>
             </div>
 
             <div className="max-w-xl mx-auto">
@@ -437,4 +436,5 @@ export default function ShopAndSongRequestSection() {
     </>
   );
 }
+
 

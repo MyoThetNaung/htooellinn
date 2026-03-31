@@ -85,8 +85,8 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
 
   const updateCarousel = () => {
     const viewportWidth = window.innerWidth;
-    const baseTranslateX = viewportWidth >= 1024 ? 360 : viewportWidth >= 768 ? 300 : 220;
-    const baseSize = viewportWidth >= 1280 ? 420 : viewportWidth >= 768 ? 360 : 280;
+    const baseTranslateX = viewportWidth >= 1280 ? 420 : viewportWidth >= 1024 ? 360 : viewportWidth >= 768 ? 300 : 220;
+    const baseSize = viewportWidth >= 1440 ? 520 : viewportWidth >= 1024 ? 440 : viewportWidth >= 768 ? 360 : 280;
 
     albumRefs.current.forEach((album, index) => {
       if (!album) return;
@@ -102,11 +102,19 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
       const zIndex = 10 - absOffset;
 
       gsap.set(album, {
+        position: "absolute",
+        left: "50%",
+        top: "50%",
+        xPercent: -50,
+        yPercent: -50,
+        transformOrigin: "center center",
         width: baseSize,
         height: baseSize,
       });
 
       gsap.to(album, {
+        xPercent: -50,
+        yPercent: -50,
         rotateY,
         x: translateX,
         z: translateZ,
@@ -140,7 +148,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
     <section
       id="discography-home-anchor"
       ref={sectionRef}
-      className="section relative flex min-h-[100dvh] min-h-screen flex-col items-center justify-start overflow-hidden px-4 pb-14 pt-0 sm:pb-16 sm:pt-2 md:pb-20 md:pt-4"
+      className="section relative flex min-h-[100dvh] min-h-screen flex-col items-center overflow-hidden px-4 pb-8 pt-2 sm:pb-10 sm:pt-4 md:pb-12 md:pt-6"
       onTouchStart={(e) => {
         const t = e.touches[0];
         touchStartRef.current = { x: t.clientX, y: t.clientY };
@@ -179,7 +187,7 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
 
       <div
         ref={titleBlockRef}
-        className="relative z-10 mb-3 flex w-full flex-col items-center sm:mb-6 md:mb-8"
+        className="relative z-10 flex w-full shrink-0 flex-col items-center pb-2 sm:pb-3"
       >
         <h2
           className="mb-3 flex w-full flex-col items-center justify-center text-center text-red-600 uppercase tracking-[0.12em] sm:mb-4 sm:tracking-widest"
@@ -213,98 +221,98 @@ export default function AlbumSelector({ albums, onSelectAlbum }: AlbumSelectorPr
         </p>
       </div>
 
-      <div
-        ref={carouselWrapRef}
-        className="relative h-[min(380px,50svh)] w-full max-w-7xl sm:h-[460px] md:h-[600px]"
-        style={{ perspective: "1500px" }}
-      >
+      <div className="relative z-10 flex w-full min-h-0 flex-1 flex-col items-center justify-center gap-4 sm:gap-6 md:gap-10">
         <div
-          ref={carouselRef}
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ transformStyle: "preserve-3d" }}
+          ref={carouselWrapRef}
+          className="relative mx-auto h-[min(360px,46svh)] w-full max-w-5xl sm:h-[min(460px,52svh)] md:h-[min(620px,56svh)] lg:h-[680px]"
+          style={{ perspective: "1500px", perspectiveOrigin: "50% 50%" }}
         >
-          {albums.map((album, index) => (
-            <div
-              key={album.id}
-              ref={(el) => {
-                albumRefs.current[index] = el;
-              }}
-              onClick={() => handleAlbumClick(index)}
-              className="absolute cursor-pointer group"
-              style={{
-                transformStyle: "preserve-3d",
-                width: "280px",
-                height: "280px",
-              }}
-            >
+          <div
+            ref={carouselRef}
+            className="absolute inset-0 flex items-center justify-center overflow-visible"
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            {albums.map((album, index) => (
               <div
-                className="relative w-full h-full rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
+                key={album.id}
+                ref={(el) => {
+                  albumRefs.current[index] = el;
+                }}
+                onClick={() => handleAlbumClick(index)}
+                className="absolute cursor-pointer group"
                 style={{
-                  boxShadow:
-                    index === currentIndex
-                      ? "0 0 40px rgba(220, 38, 38, 0.6), 0 20px 60px rgba(0, 0, 0, 0.8)"
-                      : "0 10px 30px rgba(0, 0, 0, 0.5)",
-                  border: index === currentIndex ? "3px solid #dc2626" : "3px solid #27272a",
+                  transformStyle: "preserve-3d",
                 }}
               >
-                <img
-                  src={album.cover}
-                  alt={album.title}
-                  className="w-full h-full object-cover"
-                  style={{
-                    filter: index === currentIndex ? "brightness(1.1)" : "brightness(0.7)",
-                  }}
-                />
-
                 <div
-                  className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6"
+                  className="relative w-full h-full rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
                   style={{
-                    opacity: index === currentIndex ? 1 : 0,
+                    boxShadow:
+                      index === currentIndex
+                        ? "0 0 40px rgba(220, 38, 38, 0.6), 0 20px 60px rgba(0, 0, 0, 0.8)"
+                        : "0 10px 30px rgba(0, 0, 0, 0.5)",
+                    border: index === currentIndex ? "3px solid #dc2626" : "3px solid #27272a",
                   }}
                 >
-                  {index === currentIndex && (
-                    <p className="text-gray-300 mt-2 tracking-wide" style={{ fontSize: "0.9rem" }}>
-                      Click to explore
-                    </p>
-                  )}
+                  <img
+                    src={album.cover}
+                    alt={album.title}
+                    className="w-full h-full object-cover"
+                    style={{
+                      filter: index === currentIndex ? "brightness(1.1)" : "brightness(0.7)",
+                    }}
+                  />
+
+                  <div
+                    className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6"
+                    style={{
+                      opacity: index === currentIndex ? 1 : 0,
+                    }}
+                  >
+                    {index === currentIndex && (
+                      <p className="text-gray-300 mt-2 tracking-wide" style={{ fontSize: "0.9rem" }}>
+                        Click to explore
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          <button
+            onClick={handlePrev}
+            className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-50 w-14 h-14 bg-zinc-900/80 hover:bg-red-600 border-2 border-red-600/50 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+            style={{ boxShadow: "0 0 20px rgba(220, 38, 38, 0.3)" }}
+            aria-label="Previous album"
+          >
+            <ChevronLeft className="w-8 h-8 text-white" />
+          </button>
+
+          <button
+            onClick={handleNext}
+            className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-50 w-14 h-14 bg-zinc-900/80 hover:bg-red-600 border-2 border-red-600/50 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 backdrop-blur-sm"
+            style={{ boxShadow: "0 0 20px rgba(220, 38, 38, 0.3)" }}
+            aria-label="Next album"
+          >
+            <ChevronRight className="w-8 h-8 text-white" />
+          </button>
         </div>
 
-        <button
-          onClick={handlePrev}
-          className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-50 w-14 h-14 bg-zinc-900/80 hover:bg-red-600 border-2 border-red-600/50 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 backdrop-blur-sm"
-          style={{ boxShadow: "0 0 20px rgba(220, 38, 38, 0.3)" }}
-          aria-label="Previous album"
-        >
-          <ChevronLeft className="w-8 h-8 text-white" />
-        </button>
-
-        <button
-          onClick={handleNext}
-          className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-50 w-14 h-14 bg-zinc-900/80 hover:bg-red-600 border-2 border-red-600/50 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110 backdrop-blur-sm"
-          style={{ boxShadow: "0 0 20px rgba(220, 38, 38, 0.3)" }}
-          aria-label="Next album"
-        >
-          <ChevronRight className="w-8 h-8 text-white" />
-        </button>
-      </div>
-
-      <div ref={dotsRef} className="mt-4 flex gap-3 md:mt-10">
-        {albums.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => setCurrentIndex(index)}
-            className="w-3 h-3 rounded-full transition-all duration-300"
-            style={{
-              backgroundColor: index === currentIndex ? "#dc2626" : "#3f3f46",
-              boxShadow: index === currentIndex ? "0 0 10px rgba(220, 38, 38, 0.8)" : "none",
-              transform: index === currentIndex ? "scale(1.3)" : "scale(1)",
-            }}
-          />
-        ))}
+        <div ref={dotsRef} className="flex w-full shrink-0 justify-center gap-3">
+          {albums.map((_, index) => (
+            <button
+              key={index}
+              onClick={() => setCurrentIndex(index)}
+              className="w-3 h-3 rounded-full transition-all duration-300"
+              style={{
+                backgroundColor: index === currentIndex ? "#dc2626" : "#3f3f46",
+                boxShadow: index === currentIndex ? "0 0 10px rgba(220, 38, 38, 0.8)" : "none",
+                transform: index === currentIndex ? "scale(1.3)" : "scale(1)",
+              }}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );

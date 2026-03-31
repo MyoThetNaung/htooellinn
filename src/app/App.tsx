@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import HeroSection from "./components/HeroSection";
@@ -10,6 +10,7 @@ import AlbumDetail from "./components/AlbumDetail";
 import Footer from "./components/Footer";
 import ShopAndSongRequestSection from "./components/ShopAndSongRequestSection";
 import OpeningIntro from "./components/OpeningIntro";
+import IntroGlitchBackground from "./components/IntroGlitchBackground";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -210,29 +211,32 @@ export default function App() {
 
   return (
     <div ref={containerRef} className="relative min-h-screen bg-black text-white overflow-x-hidden">
-      {showIntro && pathname === "/" ? (
-        <OpeningIntro covers={albums.map((album) => album.cover)} onComplete={handleIntroComplete} />
-      ) : null}
+      <IntroGlitchBackground />
+      <div className="relative z-10">
+        {showIntro && pathname === "/" ? (
+          <OpeningIntro covers={albums.map((album) => album.cover)} onComplete={handleIntroComplete} />
+        ) : null}
 
-      {selectedAlbum ? (
-        <AlbumDetail album={selectedAlbum} onClose={handleCloseAlbum} />
-      ) : (
-        <>
-          {isSpecialShopRoute ? (
-            <ShopAndSongRequestSection />
-          ) : (
-            <>
-              <HeroSection />
-              <CdPlayerSection />
-              <AboutSection />
-              <AlbumSelector albums={albums} onSelectAlbum={handleOpenAlbum} />
+        {selectedAlbum ? (
+          <AlbumDetail album={selectedAlbum} onClose={handleCloseAlbum} />
+        ) : (
+          <>
+            {isSpecialShopRoute ? (
               <ShopAndSongRequestSection />
-              <GallerySection />
-              <Footer />
-            </>
-          )}
-        </>
-      )}
+            ) : (
+              <>
+                <HeroSection />
+                <CdPlayerSection />
+                <AboutSection />
+                <AlbumSelector albums={albums} onSelectAlbum={handleOpenAlbum} />
+                <ShopAndSongRequestSection />
+                <GallerySection />
+                <Footer />
+              </>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

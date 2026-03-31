@@ -64,7 +64,7 @@ export default function AboutSection() {
     <div
       id="legend"
       ref={sectionRef}
-      className="section min-h-screen px-4 bg-gradient-to-b from-black via-zinc-900 to-black flex items-center"
+      className="section min-h-screen px-4 flex items-center"
     >
       <div className="max-w-6xl mx-auto w-full">
         <h2

@@ -6,6 +6,7 @@ const mainBackground = new URL("../../../resource images/main background.jpg", i
 
 export default function HeroSection() {
   const heroRef = useRef<HTMLDivElement>(null);
+  const heroImageRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLDivElement>(null);
 
@@ -26,7 +27,7 @@ export default function HeroSection() {
         ease: "power4.out",
       });
 
-      gsap.to(heroRef.current, {
+      gsap.to(heroImageRef.current, {
         backgroundPosition: "50% 100%",
         ease: "none",
         scrollTrigger: {
@@ -45,13 +46,19 @@ export default function HeroSection() {
     <div
       ref={heroRef}
       className="section relative h-screen flex flex-col items-center justify-center overflow-hidden"
-      style={{
-        backgroundImage: `url(${mainBackground})`,
-        backgroundSize: "cover",
-        backgroundPosition: "50% 0%",
-      }}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black" />
+      <div
+        ref={heroImageRef}
+        className="absolute inset-0"
+        style={{
+          backgroundImage: `url(${mainBackground})`,
+          backgroundSize: "cover",
+          backgroundPosition: "50% 0%",
+          WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 62%, transparent 100%)",
+          maskImage: "linear-gradient(to bottom, black 0%, black 62%, transparent 100%)",
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/75 via-black/45 to-transparent" />
 
       <div className="relative z-10 text-center px-4">
         <div ref={titleRef} className="mb-6 flex justify-center w-[90vw] md:w-2/3 mx-auto">
@@ -138,9 +145,7 @@ export default function HeroSection() {
             Thunder
           </FuzzyText>
         </div>
-
       </div>
-
     </div>
   );
 }

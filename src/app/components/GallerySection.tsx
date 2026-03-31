@@ -73,7 +73,7 @@ export default function GallerySection() {
   };
 
   return (
-    <div ref={sectionRef} className="section flex min-h-screen w-full flex-col items-center py-20 px-4 bg-gradient-to-b from-black via-zinc-900 to-black">
+    <div ref={sectionRef} className="section flex min-h-screen w-full flex-col items-center py-20 px-4">
       <div className="w-full max-w-7xl mx-auto flex flex-col items-center">
         <h2
           className="mb-16 flex w-full flex-col items-center justify-center text-center uppercase tracking-widest"

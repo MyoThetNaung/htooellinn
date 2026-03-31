@@ -53,7 +53,7 @@ export default function CdPlayerSection() {
   return (
     <section
       ref={sectionRef}
-      className="section flex min-h-screen flex-col bg-gradient-to-b from-black via-zinc-950 to-black px-4"
+      className="section flex min-h-screen flex-col px-4"
     >
       <h2
         className="w-full shrink-0 pt-8 text-center uppercase tracking-[0.35em] text-zinc-200 md:pt-12"
